@@ -194,6 +194,7 @@ from .minimum_eigen_solvers import (VQE, VQEResult, QAOA, IQPE, IQPEResult, QPE,
                                     ClassicalCPLEX, CPLEX_Ising, NumPyMinimumEigensolver,
                                     MinimumEigensolver, MinimumEigensolverResult)
 from .education import EOH, Simon, DeutschJozsa, BernsteinVazirani
+from .phase_estimators import PhaseEstimator
 
 __all__ = [
     'AlgorithmResult',
@@ -233,4 +234,5 @@ __all__ = [
     'BernsteinVazirani',
     'HHL',
     'Shor',
+    'PhaseEstimator'
 ]
