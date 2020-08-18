@@ -2,6 +2,7 @@
 
 from typing import Dict, Optional, Union
 from qiskit.circuit.library import PhaseEstimation
+from qiskit.circuit.classicalregister import ClassicalRegister
 from qiskit.providers import BaseBackend
 from qiskit.aqua import QuantumInstance
 from qiskit.aqua.algorithms import QuantumAlgorithm
@@ -18,7 +19,7 @@ class PhaseEstimator(QuantumAlgorithm):
 
     def __init__(self,
                  phase_estimation: PhaseEstimation,
-                 quantum_instance: Optional[Union[QuantumInstance, BaseBackend]]):
+                 quantum_instance: Optional[Union[QuantumInstance, BaseBackend]] = None):
 
         self._phase_estimation = phase_estimation
         super().__init__(quantum_instance)
@@ -39,13 +40,13 @@ class PhaseEstimator(QuantumAlgorithm):
             )
             diag = evaluation_density_matrix.diagonal()
             idx = np.argmax(abs(diag)) # np.argmax ignores complex part of number. But, we take abs anyway
-            bin_frac = np.binary_repr(idx, num_evaluation_qubits)
+            binary_phase_string = np.binary_repr(idx, num_evaluation_qubits)
 
         else:
             counts = dict(result.get_counts())
-            bin_frac = max(counts, key=counts.get)
+            binary_phase_string = max(counts, key=counts.get)
 
-        phase =  int(bin_frac[::-1], 2) / (2 ** num_evaluation_qubits)
+        phase =  int(binary_phase_string[::-1], 2) / (2 ** num_evaluation_qubits)
 
         return phase
 
@@ -56,13 +57,12 @@ class PhaseEstimator(QuantumAlgorithm):
         circ = self._phase_estimation
         if not self._quantum_instance.is_statevector:
             # Measure only the evaluation qubits.
-            new_creg = circ._create_creg(circ.num_evaluation_qubits, 'meas')
-            circ.add_register(new_creg)
+            creg = ClassicalRegister(circ.num_evaluation_qubits, 'meas')
+            circ.add_register(creg)
             circ.barrier()
-            for b in range(circ.num_evaluation_qubits):
-                circ.measure(b, b)
+            circ.measure(range(circ.num_evaluation_qubits), range(circ.num_evaluation_qubits))
 
-        job = execute(circ, self.backend)
-        phase = self._compute_phase(job.result())
+        result = self._quantum_instance.execute(circ)
+        phase = self._compute_phase(result)
 
-        return phase, job.result()
+        return phase, result
