@@ -34,6 +34,7 @@ class PhaseEstimator(QuantumAlgorithm):
         num_evaluation_qubits = self._phase_estimation.num_evaluation_qubits
         if self._quantum_instance.is_statevector:
             state_vec = result.get_statevector()
+            # FIXME: Following digs into the implementation of PhaseEstimation circuit.
             evaluation_density_matrix = get_subsystem_density_matrix(
                 state_vec,
                 range(num_evaluation_qubits, num_evaluation_qubits + self._phase_estimation.num_unitary_qubits)
