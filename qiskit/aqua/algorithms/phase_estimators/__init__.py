@@ -14,8 +14,9 @@
 
 """ Phase Estimators """
 
-from .phase_estimator import PhaseEstimator
+from .phase_estimator import PhaseEstimator, index_to_phase
 
 __all__ = [
-    'PhaseEstimator'
+    'PhaseEstimator',
+    'index_to_phase'
 ]
