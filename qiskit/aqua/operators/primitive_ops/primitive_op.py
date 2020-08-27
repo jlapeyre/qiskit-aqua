@@ -14,7 +14,7 @@
 
 """ PrimitiveOp Class """
 
-from typing import Optional, Union, Set, List
+from typing import Optional, Union, Set, List, Dict
 import logging
 import numpy as np
 from scipy.sparse import spmatrix
@@ -213,9 +213,18 @@ class PrimitiveOp(OperatorBase):
         return "{}({}, coeff={})".format(type(self).__name__, repr(self.primitive), self.coeff)
 
     def eval(self,
-             front: Union[str, dict, np.ndarray,
-                          OperatorBase] = None) -> Union[OperatorBase, float, complex]:
+             front: Optional[Union[str, Dict[str, complex], np.ndarray, OperatorBase]] = None
+             ) -> Union[OperatorBase, float, complex]:
         raise NotImplementedError
+
+    @property
+    def parameters(self):
+        params = set()
+        if isinstance(self.primitive, (OperatorBase, QuantumCircuit)):
+            params.update(self.primitive.parameters)
+        if isinstance(self.coeff, ParameterExpression):
+            params.update(self.coeff.parameters)
+        return params
 
     def assign_parameters(self, param_dict: dict) -> OperatorBase:
         param_value = self.coeff
