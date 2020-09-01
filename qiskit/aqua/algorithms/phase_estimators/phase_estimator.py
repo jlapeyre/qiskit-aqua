@@ -2,7 +2,8 @@
 
 from typing import Dict, Optional, Union
 from qiskit.circuit import QuantumCircuit
-from qiskit.result import Counts
+import qiskit
+#from qiskit.result import Counts
 #from qiskit.circuit.library import PhaseEstimation
 from qiskit.circuit.classicalregister import ClassicalRegister
 from qiskit.providers import BaseBackend
@@ -15,8 +16,6 @@ import numpy as np
 
 class PhaseEstimator(QuantumAlgorithm):
     """The Quantum Phase Estimation algorithm.
-
-    Blah
     """
 
     def __init__(self,
@@ -31,28 +30,27 @@ class PhaseEstimator(QuantumAlgorithm):
         self._num_unitary_qubits = num_unitary_qubits
 
         if not input_state_circuit is None:
-            self._pe_circuit = pe_circuit.compose(input_state_circuit,
-                                                  qubits=range(num_evaluation_qubits, num_evaluation_qubits + num_unitary_qubits),
-                                                  front=True)
+            self._pe_circuit = pe_circuit.compose(
+                input_state_circuit,
+                qubits=range(num_evaluation_qubits, num_evaluation_qubits + num_unitary_qubits),
+                front=True)
         else:
             self._pe_circuit = pe_circuit
 
         super().__init__(quantum_instance)
         self._add_classical_register()
 
-
     def _add_classical_register(self):
         """Explicitly add measurement instructions only if we are using a state vector simulator."""
-        circ = self._pe_circuit
         if not self._quantum_instance.is_statevector:
             # Measure only the evaluation qubits.
             regname = 'meas'
+            circ = self._pe_circuit
             if not regname in [reg.name for reg in circ.cregs]:
                 creg = ClassicalRegister(self._num_evaluation_qubits, regname)
                 circ.add_register(creg)
                 circ.barrier()
                 circ.measure(range(self._num_evaluation_qubits), range(self._num_evaluation_qubits))
-
 
     def _state_vector_phases(self):
         state_vec = self._result.get_statevector()
@@ -63,16 +61,20 @@ class PhaseEstimator(QuantumAlgorithm):
         phases = evaluation_density_matrix.diagonal().real # The diagonal is real
         return phases
 
+    @property
+    def phases(self):
+        """ Returns the phases and their frequencies """
+        return self._phases
+
     def _compute_phases(self):
         if self._quantum_instance.is_statevector:
             phases = self._state_vector_phases()
         else:
             # return counts with keys sorted numerically
             counts = self._result.get_counts()
-            ck = list(counts.keys())
-            ck.sort() # Sorts in order integer encoded by binary string
-            phases = {k : counts[k] for k in ck}
-            phases = Counts(phases, memory_slots=counts.memory_slots, creg_sizes=counts.creg_sizes)
+            phases = {k[::-1] : counts[k] for k in counts.keys()}
+            phases = _sort_phases(phases)
+            phases = qiskit.result.Counts(phases, memory_slots=counts.memory_slots, creg_sizes=counts.creg_sizes)
 
         self._phases = phases
 
@@ -85,27 +87,13 @@ class PhaseEstimator(QuantumAlgorithm):
         """
         if self._quantum_instance.is_statevector:
             idx = np.argmax(abs(self._phases)) # np.argmax ignores complex part of number. But, we take abs anyway
-            binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)
+            binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)[::-1]
 
         else:
             binary_phase_string = max(self._phases, key=self._phases.get)
 
-        phase = index_to_phase(binary_phase_string)
-
+        phase = bit_string_to_phase(binary_phase_string)
         return phase
-
-        # if self._quantum_instance.is_statevector:
-        #     phases = self._state_vector_phases()
-        #     idx = np.argmax(abs(phases)) # np.argmax ignores complex part of number. But, we take abs anyway
-        #     binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)
-
-        # else:
-        #     counts = self._result.get_counts()
-        #     binary_phase_string = max(counts, key=counts.get)
-
-        # phase = index_to_phase(binary_phase_string)
-
-        # return phase
 
     def _run(self):
         """Run the circuit and return the estimated phase as a number between 0.0 and 1.0, with 1.0 corresponding
@@ -116,7 +104,33 @@ class PhaseEstimator(QuantumAlgorithm):
         self._result = result
         self._compute_phases()
 
+    def filter_phases(self, cutoff):
+        """ Return a dict of phases and frequencies (counts) only for frequencies (counts)
+        larger than cutoff
+        """
+        if isinstance(self._phases, qiskit.result.Counts):
+            counts = self._phases
+            phases = {k : counts[k] for k in counts.keys() if counts[k] > cutoff}
 
-def index_to_phase(binary_string):
+        else:
+            phases = {}
+            for idx, amplitude in enumerate(self._phases):
+                if amplitude > cutoff:
+                    binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)[::-1]
+                    phases[binary_phase_string] = amplitude
+            phases = _sort_phases(phases)
+
+        return phases
+
+
+def bit_string_to_phase(binary_string):
     n_qubits = len(binary_string)
-    return int(binary_string[::-1], 2) / (2 ** n_qubits)
+    return int(binary_string, 2) / (2 ** n_qubits)
+#    return int(binary_string[::-1], 2) / (2 ** n_qubits)
+
+
+def _sort_phases(phases):
+    ck = list(phases.keys())
+    ck.sort(reverse=False) # Sorts in order integer encoded by binary string
+    phases = {k : phases[k] for k in ck}
+    return phases
