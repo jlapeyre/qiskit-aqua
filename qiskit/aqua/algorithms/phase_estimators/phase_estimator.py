@@ -63,7 +63,7 @@ class PhaseEstimator(QuantumAlgorithm):
 
     @property
     def phases(self):
-        """ Returns the phases and their frequencies """
+        """ Returns the all phases and their frequencies """
         return self._phases
 
     def _compute_phases(self):
