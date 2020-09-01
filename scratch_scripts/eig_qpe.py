@@ -15,21 +15,28 @@ def eigtester(op_circ, input_state_circuit=None, n_eval_qubits = 8):
     # be = Aer.get_backend('statevector_simulator')
     qi = QuantumInstance(backend=be, shots=100000)
     pec = PhaseEstimation(n_eval_qubits, op_circ)
-    p_est = PhaseEstimator(pec, num_evaluation_qubits=n_eval_qubits,
+    p_est = PhaseEstimator(num_evaluation_qubits=n_eval_qubits,
+                           pe_circuit = pec,
                            num_unitary_qubits=op_circ.num_qubits, quantum_instance=qi,
-                       input_state_circuit=input_state_circuit)
+                           input_state_circuit=input_state_circuit)
     p_est.run()
     phase = p_est.single_phase()
     return phase
 
 def phasestester(op_circ, input_state_circuit=None, n_eval_qubits = 8):
-    be = Aer.get_backend('qasm_simulator')
-#    be = Aer.get_backend('statevector_simulator')
+#    be = Aer.get_backend('qasm_simulator')
+    be = Aer.get_backend('statevector_simulator')
     qi = QuantumInstance(backend=be, shots=100000)
-    pec = PhaseEstimation(n_eval_qubits, op_circ)
-    p_est = PhaseEstimator(pec, num_evaluation_qubits=n_eval_qubits,
-                           num_unitary_qubits=op_circ.num_qubits, quantum_instance=qi,
-                       input_state_circuit=input_state_circuit)
+    p_est = PhaseEstimator(num_evaluation_qubits=n_eval_qubits,
+                           unitary = op_circ,
+                           quantum_instance=qi,
+                           input_state_circuit=input_state_circuit)
+    # pec = PhaseEstimation(n_eval_qubits, op_circ)
+    # p_est = PhaseEstimator(num_evaluation_qubits=n_eval_qubits,
+    #                        pe_circuit = pec,
+    #                        num_unitary_qubits=op_circ.num_qubits, quantum_instance=qi,
+    #                    input_state_circuit=input_state_circuit)
+
     p_est.run()
     return p_est
 
