@@ -93,6 +93,11 @@ class PhaseEstimator(QuantumAlgorithm):
         """
         return self._phases
 
+    @property
+    def pe_circuit(self):
+        """ Return the phase estimation circuit. """
+        return self._pe_circuit
+
     def _compute_phases(self):
         if self._quantum_instance.is_statevector:
             state_vec = self._result.get_statevector()
@@ -178,6 +183,13 @@ class PhaseEstimator(QuantumAlgorithm):
             phases = _sort_phases(phases)
 
         return phases
+
+    def phases_as_float(self):
+        """
+        Return a dictionary whose keys are phases as floats in `[0, 1)` and values are
+        freqencies or counts.
+        """
+        return self.filter_phases(0, as_float=True)
 
 
 def bit_string_to_phase(binary_string):
