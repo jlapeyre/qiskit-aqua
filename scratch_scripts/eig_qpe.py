@@ -23,10 +23,9 @@ def eigtester(op_circ, input_state_circuit=None, n_eval_qubits = 8):
     phase = p_est.single_phase()
     return phase
 
-def phasestester(op_circ, input_state_circuit=None, n_eval_qubits = 8):
-#    be = Aer.get_backend('qasm_simulator')
-    be = Aer.get_backend('statevector_simulator')
-    qi = QuantumInstance(backend=be, shots=100000)
+def phasestester(op_circ, input_state_circuit=None, n_eval_qubits = 8,
+                 backend = Aer.get_backend('qasm_simulator')):
+    qi = QuantumInstance(backend=backend, shots=100000)
     p_est = PhaseEstimator(num_evaluation_qubits=n_eval_qubits,
                            unitary = op_circ,
                            quantum_instance=qi,
@@ -41,10 +40,17 @@ def phasestester(op_circ, input_state_circuit=None, n_eval_qubits = 8):
     return p_est
 
 def phasetest1():
-    phi = 0.42
+    phi = 2 * np.pi / 3
     op_circ = (phi * Z).exp_i().to_circuit() # already a CircuitOp
-    input_state_circuit = X.to_circuit()
-    p_est = phasestester(op_circ, input_state_circuit)
+    input_state_circuit = None
+#    input_state_circuit = X.to_circuit()
+    p_est = phasestester(op_circ, input_state_circuit, n_eval_qubits=8)
+    return p_est
+
+def phasetest2(backend = Aer.get_backend('qasm_simulator')):
+    op_circ = Z.to_circuit()
+    input_state_circuit = H.to_circuit()
+    p_est = phasestester(op_circ, input_state_circuit, n_eval_qubits=8, backend=backend)
     return p_est
 
 def eigtest1():
