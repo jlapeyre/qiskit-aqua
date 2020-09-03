@@ -13,6 +13,17 @@ from qiskit import execute
 from qiskit.aqua.utils import get_subsystem_density_matrix
 import numpy as np
 
+# Maybe we want to use this abstract class
+# from qiskit.aqua.algorithms import AlgorithmResult
+
+#class PhaseEstimatorResult(AlgorithmResult):
+class PhaseEstimatorResult():
+    """
+    """
+
+    def __init__(self):
+        pass
+
 
 class PhaseEstimator(QuantumAlgorithm):
     """The Quantum Phase Estimation algorithm.
@@ -20,10 +31,10 @@ class PhaseEstimator(QuantumAlgorithm):
 
     def __init__(self,
                  num_evaluation_qubits,
+                 unitary = None,
                  pe_circuit = None,
                  num_unitary_qubits = None,
-                 unitary = None,
-                 input_state_circuit = None,
+                 state_preparation = None,
                  quantum_instance: Optional[Union[QuantumInstance, BaseBackend]] = None):
 
         """
@@ -38,12 +49,14 @@ class PhaseEstimator(QuantumAlgorithm):
                                 `unitary` if `unitary` is passed.
             unitary: The circuit representing the unitary operator whose eigenvalues (via phase) will
                      be measured. Exactly one of `pe_circuit` and `unitary` must be passed.
-            input_state_circuit: The circuit that prepares the state whose eigenphase will be measured.
+            state_preparation: The circuit that prepares the state whose eigenphase will be measured.
                                  If this parameter is ommited, no preparation circuit will be run and
                                  input state will be the all-zero state in the computational basis.
             quantum_instance: The quantum instance on which the circuit will be run.
         """
 
+        # Determine if user passed a unitary, or the entire QPE circuit with the unitary already embedded,
+        # and set properties.
         if unitary is None:
             if pe_circuit is None:
                 raise ValueError('One one of `unitary` and `pe_circuit` may be `None`.')
@@ -61,9 +74,9 @@ class PhaseEstimator(QuantumAlgorithm):
 
         self._num_evaluation_qubits = num_evaluation_qubits
 
-        if not input_state_circuit is None:
+        if not state_preparation is None:
             self._pe_circuit = pe_circuit.compose(
-                input_state_circuit,
+                state_preparation,
                 qubits=range(num_evaluation_qubits, num_evaluation_qubits + self._num_unitary_qubits),
                 front=True)
         else:
@@ -131,7 +144,7 @@ class PhaseEstimator(QuantumAlgorithm):
         else:
             binary_phase_string = max(self._phases, key=self._phases.get)
 
-        phase = bit_string_to_phase(binary_phase_string)
+        phase = _bit_string_to_phase(binary_phase_string)
         return phase
 
     def _run(self):
@@ -163,22 +176,20 @@ class PhaseEstimator(QuantumAlgorithm):
         if isinstance(self._phases, qiskit.result.Counts):
             counts = self._phases
             if as_float:
-                phases = {bit_string_to_phase(k) : counts[k] for k in counts.keys() if counts[k] > cutoff}
+                phases = {_bit_string_to_phase(k) : counts[k] for k in counts.keys() if counts[k] > cutoff}
             else:
                 phases = {k : counts[k] for k in counts.keys() if counts[k] > cutoff}
 
         else:
             phases = {}
-            if as_float:
-                for idx, amplitude in enumerate(self._phases):
-                    if amplitude > cutoff:
-                        binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)[::-1]
-                        phases[bit_string_to_phase(binary_phase_string)] = amplitude
-            else:
-                for idx, amplitude in enumerate(self._phases):
-                    if amplitude > cutoff:
-                        binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)[::-1]
-                        phases[binary_phase_string] = amplitude
+            for idx, amplitude in enumerate(self._phases):
+                if amplitude > cutoff:
+                    binary_phase_string = np.binary_repr(idx, self._num_evaluation_qubits)[::-1]
+                    if as_float:
+                        _key = _bit_string_to_phase(binary_phase_string)
+                    else:
+                        _key = binary_phase_string
+                    phases[_key] = amplitude
 
             phases = _sort_phases(phases)
 
@@ -192,7 +203,7 @@ class PhaseEstimator(QuantumAlgorithm):
         return self.filter_phases(0, as_float=True)
 
 
-def bit_string_to_phase(binary_string):
+def _bit_string_to_phase(binary_string):
     """
     Convert bit string to phase. It is assumed that the bit string is correctly padded
     and that the order of the bits has been reversed relative to their order when the counts

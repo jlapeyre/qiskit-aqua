@@ -14,9 +14,8 @@
 
 """ Phase Estimators """
 
-from .phase_estimator import PhaseEstimator, bit_string_to_phase
+from .phase_estimator import PhaseEstimator
 
 __all__ = [
-    'PhaseEstimator',
-    'bit_string_to_phase'
+    'PhaseEstimator'
 ]
