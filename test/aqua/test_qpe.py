@@ -78,15 +78,15 @@ class TestQPE(QiskitAquaTestCase):
     @unpack
     def test_qpe(self, qubit_op, simulator, num_time_slices, n_ancillae):
         """Test the QPE algorithm."""
-        self.log.debug('Testing QPE')
+        print('Testing QPE')
         qubit_op = self._dict[qubit_op]
         exact_eigensolver = NumPyMinimumEigensolver(qubit_op)
         results = exact_eigensolver.run()
 
         ref_eigenval = results.eigenvalue
         ref_eigenvec = results.eigenstate
-        self.log.debug('The exact eigenvalue is:       %s', ref_eigenval)
-        self.log.debug('The corresponding eigenvector: %s', ref_eigenvec)
+        print('The exact eigenvalue is:       %s', ref_eigenval)
+        print('The corresponding eigenvector: %s', ref_eigenvec)
 
         state_in = Custom(qubit_op.num_qubits, state_vector=ref_eigenvec)
         iqft = QFT(n_ancillae).inverse()
@@ -102,15 +102,15 @@ class TestQPE(QiskitAquaTestCase):
         result = qpe.run(quantum_instance)
 
         # report result
-        self.log.debug('top result str label:         %s', result.top_measurement_label)
-        self.log.debug('top result in decimal:        %s', result.top_measurement_decimal)
-        self.log.debug('stretch:                      %s', result.stretch)
-        self.log.debug('translation:                  %s', result.translation)
-        self.log.debug('final eigenvalue from QPE:    %s', result.eigenvalue)
-        self.log.debug('reference eigenvalue:         %s', ref_eigenval)
-        self.log.debug('ref eigenvalue (transformed): %s',
+        print('top result str label:         %s', result.top_measurement_label)
+        print('top result in decimal:        %s', result.top_measurement_decimal)
+        print('stretch:                      %s', result.stretch)
+        print('translation:                  %s', result.translation)
+        print('final eigenvalue from QPE:    %s', result.eigenvalue)
+        print('reference eigenvalue:         %s', ref_eigenval)
+        print('ref eigenvalue (transformed): %s',
                        (ref_eigenval + result.translation) * result.stretch)
-        self.log.debug('reference binary str label:   %s', decimal_to_binary(
+        print('reference binary str label:   %s', decimal_to_binary(
             (ref_eigenval.real + result.translation) * result.stretch,
             max_num_digits=n_ancillae + 3,
             fractional_part_only=True

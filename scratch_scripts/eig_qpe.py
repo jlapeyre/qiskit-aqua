@@ -1,5 +1,4 @@
 import numpy as np
-import qiskit as qk
 import scipy
 from qiskit import Aer
 from qiskit.aqua import QuantumInstance

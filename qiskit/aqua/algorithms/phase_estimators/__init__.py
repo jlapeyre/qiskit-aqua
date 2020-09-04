@@ -15,7 +15,11 @@
 """ Phase Estimators """
 
 from .phase_estimator import PhaseEstimator
+from .phase_estimator_result import PhaseEstimatorResult, PhaseEstimationEigenvalues
+
 
 __all__ = [
-    'PhaseEstimator'
+    'PhaseEstimator',
+    'PhaseEstimatorResult',
+    'PhaseEstimationEigenvalues'
 ]
