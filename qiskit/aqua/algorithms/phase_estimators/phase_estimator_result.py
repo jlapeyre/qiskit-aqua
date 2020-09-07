@@ -9,18 +9,34 @@ class PhaseEstimatorResult():
     """
     """
 
-    def __init__(self, num_evaluation_qubits, phases):
+    def __init__(self, num_evaluation_qubits, circuit_result, phase_array=None, phase_dict=None):
         self._num_evaluation_qubits = num_evaluation_qubits
-        self._phases = phases
+        self._phase_array = phase_array
+        self._phase_dict = phase_dict
+        self._circuit_result = circuit_result
 
     @property
-    def phases(self):
+    def phase_array(self):
         """
         Returns the all phases and their frequencies. This is either a dict whose
         keys are bit strings and values are counts, or an array whose values correspond
         to weights on bit strings.
         """
-        return self._phases
+        return self._phase_array
+
+    @property
+    def phase_dict(self):
+        """
+        Returns the all phases and their frequencies. This is either a dict whose
+        keys are bit strings and values are counts, or an array whose values correspond
+        to weights on bit strings.
+        """
+        return self._phase_dict
+
+
+    @property
+    def circuit_result(self):
+        return self._circuit_result
 
     # If we reversed the bit order of evaluation register circuit (including the iqft) then we would avoid
     # the binary calculations in the case of the statevector simulator.
@@ -31,16 +47,15 @@ class PhaseEstimatorResult():
         the peak of the probability density occurs at the bit string that most closely approximates
         the true phase.
         """
-        if isinstance(self._phases, numpy.ndarray):
-            idx = numpy.argmax(abs(self._phases)) # numpy.argmax ignores complex part of number. But, we take abs anyway
-            binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
+        if not self._phase_dict is None:
+            binary_phase_string = max(self._phase_dict, key=self._phase_dict.get)
         else:
-            binary_phase_string = max(self._phases, key=self._phases.get)
-
+            idx = numpy.argmax(abs(self._phase_array)) # numpy.argmax ignores complex part of number. But, we take abs anyway
+            binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
         phase = _bit_string_to_phase(binary_phase_string)
         return phase
 
-    def filter_phases(self, cutoff, as_float=False):
+    def filter_phases(self, cutoff, as_float=True):
         """
         Return a dict whose keys are phases and values are frequencies (counts)
         keeping only frequencies (counts) larger than cutoff. It is assumed that
@@ -56,8 +71,8 @@ class PhaseEstimatorResult():
             as_float: If `True`, returned keys are floats in `[0.0, 1)`. If `False`
                       returned keys are bit strings.
         """
-        if isinstance(self._phases, qiskit.result.Counts):
-            counts = self._phases
+        if not self._phase_dict is None:
+            counts = self._phase_dict
             if as_float:
                 phases = {_bit_string_to_phase(k) : counts[k] for k in counts.keys() if counts[k] > cutoff}
             else:
@@ -65,7 +80,7 @@ class PhaseEstimatorResult():
 
         else:
             phases = {}
-            for idx, amplitude in enumerate(self._phases):
+            for idx, amplitude in enumerate(self._phase_array):
                 if amplitude > cutoff:
                     binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
                     if as_float:

@@ -91,9 +91,9 @@ class PhaseEstimator(QuantumAlgorithm):
         """ Return the phase estimation circuit. """
         return self._pe_circuit
 
-    def _compute_phases(self, result):
+    def _compute_phases(self, circuit_result):
         if self._quantum_instance.is_statevector:
-            state_vec = result.get_statevector()
+            state_vec = circuit_result.get_statevector()
             evaluation_density_matrix = get_subsystem_density_matrix(
                 state_vec,
                 range(self._num_evaluation_qubits, self._num_evaluation_qubits + self._num_unitary_qubits)
@@ -101,8 +101,9 @@ class PhaseEstimator(QuantumAlgorithm):
             phases = evaluation_density_matrix.diagonal().real # The diagonal is real
         else:
             # return counts with keys sorted numerically
-            counts = result.get_counts()
-            phases = {k[::-1] : counts[k] for k in counts.keys()}
+            num_shots = circuit_result.results[0].shots
+            counts = circuit_result.get_counts()
+            phases = {k[::-1] : counts[k] / num_shots for k in counts.keys()}
             phases = _sort_phases(phases)
             phases = qiskit.result.Counts(phases, memory_slots=counts.memory_slots, creg_sizes=counts.creg_sizes)
 
@@ -115,7 +116,9 @@ class PhaseEstimator(QuantumAlgorithm):
         to a phase of 2pi.
         """
 
-        result = self._quantum_instance.execute(self._pe_circuit)
-        phases = self._compute_phases(result)
-
-        return PhaseEstimatorResult(self._num_evaluation_qubits, phases)
+        circuit_result = self._quantum_instance.execute(self._pe_circuit)
+        phases = self._compute_phases(circuit_result)
+        if isinstance(phases, numpy.ndarray):
+            return PhaseEstimatorResult(self._num_evaluation_qubits, phase_array = phases, circuit_result=circuit_result)
+        else:
+            return PhaseEstimatorResult(self._num_evaluation_qubits, phase_dict = phases, circuit_result=circuit_result)
