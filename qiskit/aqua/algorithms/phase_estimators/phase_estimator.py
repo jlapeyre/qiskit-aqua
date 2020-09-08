@@ -71,7 +71,7 @@ class PhaseEstimator(QuantumAlgorithm):
             self._pe_circuit = pe_circuit
 
         super().__init__(quantum_instance)
-        self._add_classical_register()
+
 
     def _add_classical_register(self):
         """Explicitly add measurement instructions only if we are using a state vector simulator."""
@@ -111,11 +111,10 @@ class PhaseEstimator(QuantumAlgorithm):
 
 
     def _run(self):
-        """
-        Run the circuit and return the estimated phase as a number between 0.0 and 1.0, with 1.0 corresponding
-        to a phase of 2pi.
+        """Run the circuit and return and return `PhaseEstimatorResult`.
         """
 
+        self._add_classical_register()
         circuit_result = self._quantum_instance.execute(self._pe_circuit)
         phases = self._compute_phases(circuit_result)
         if isinstance(phases, numpy.ndarray):

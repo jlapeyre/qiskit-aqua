@@ -1,6 +1,6 @@
 import numpy
-import qiskit
 
+# import qiskit
 # Maybe we want to use this abstract class
 # from qiskit.aqua.algorithms import AlgorithmResult
 
@@ -17,19 +17,15 @@ class PhaseEstimatorResult():
 
     @property
     def phase_array(self):
-        """
-        Returns the all phases and their frequencies. This is either a dict whose
-        keys are bit strings and values are counts, or an array whose values correspond
+        """Returns the all phases and their frequencies. This is an array whose values correspond
         to weights on bit strings.
         """
         return self._phase_array
 
     @property
     def phase_dict(self):
-        """
-        Returns the all phases and their frequencies. This is either a dict whose
-        keys are bit strings and values are counts, or an array whose values correspond
-        to weights on bit strings.
+        """Returns the all phases and their frequencies. This is a dict whose
+        keys are bit strings and values are weights on bit strings.
         """
         return self._phase_dict
 
@@ -41,8 +37,7 @@ class PhaseEstimatorResult():
     # If we reversed the bit order of evaluation register circuit (including the iqft) then we would avoid
     # the binary calculations in the case of the statevector simulator.
     def single_phase(self):
-        """
-        Return the estimated phase as a number between 0.0 and 1.0, with 1.0 corresponding to a
+        """ Return the estimated phase as a number between 0.0 and 1.0, with 1.0 corresponding to a
         phase of 2pi. It is assumed that the input vector is an eigenvecter of the unitary so that
         the peak of the probability density occurs at the bit string that most closely approximates
         the true phase.
@@ -99,25 +94,6 @@ class PhaseEstimatorResult():
         freqencies or counts.
         """
         return self.filter_phases(0, as_float=True)
-
-
-class PhaseEstimationEigenvalues():
-
-    def __init__(self, bound):
-        self._bound = bound
-
-    @property
-    def scale(self):
-        return  numpy.pi / self._bound
-
-    def eigenvalues(self, phases):
-        w = 2 * self._bound
-        if isinstance(phases, list):
-            phases = [x * w if x <= 0.5 else (x - 1) * w for x in phases]
-        else:
-            phases = {(x * w if x <= 0.5 else (x - 1) * w) : phases[x] for x in phases.keys()}
-
-        return phases
 
 
 def _bit_string_to_phase(binary_string):
