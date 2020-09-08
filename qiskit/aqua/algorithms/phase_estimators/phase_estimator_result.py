@@ -11,7 +11,6 @@
 # that they have been altered from the originals.
 
 
-
 import numpy
 
 # import qiskit
@@ -30,7 +29,6 @@ class PhaseEstimatorResult():
 
     def __init__(self, num_evaluation_qubits, circuit_result, phase_array=None, phase_dict=None):
         """
-
         Args:
             num_evaluation_qubits: number of qubits in phase-readout register.
             circuit_result: result object returned by method running circuit.
@@ -128,6 +126,9 @@ class PhaseEstimatorResult():
             phases = {}
             for idx, amplitude in enumerate(self._phase_array):
                 if amplitude > cutoff:
+                    # Each index corresponds to a computational basis state with the LSB rightmost.
+                    # But, we chose to apply the unitaries such that the phase is recorded in reverse
+                    # order. So, we reverse the bitstrings here.
                     binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
                     if as_float:
                         _key = _bit_string_to_phase(binary_phase_string)
@@ -139,20 +140,26 @@ class PhaseEstimatorResult():
 
         return phases
 
-    def phases_as_floats(self):
-        """
-        Return a dictionary whose keys are phases as floats in `[0, 1)` and values are
-        freqencies or counts.
-        """
-        return self.filter_phases(0, as_float=True)
+    # def phases_as_floats(self):
+    #     """
+    #     Return a dictionary whose keys are phases as floats in `[0, 1)` and values are
+    #     freqencies or counts.
+    #     """
+    #     return self.filter_phases(0, as_float=True)
 
 
+# TODO: maybe we do want to remove leading _
+# This is useful for pedagogy.
 def _bit_string_to_phase(binary_string):
-    """Convert bit string to phase.
+    """Convert bit string to phase in `[0,1)`
 
     It is assumed that the bit string is correctly padded and that the order of
     the bits has been reversed relative to their order when the counts
-    were recorded.
+    were recorded. The LSB is the right most when interpreting the bistring as
+    a phase.
+
+    Args:
+        binary_string: A string of characters '0' and '1'.
     """
     n_qubits = len(binary_string)
     return int(binary_string, 2) / (2 ** n_qubits)
@@ -161,10 +168,10 @@ def _bit_string_to_phase(binary_string):
 def _sort_phases(phases):
     """Sort a dict whose keys are bit strings representing phases and whose values are frequencies by bit string.
 
-    The bit strings are sorted according to increasing phase. This relies on python
+    The bit strings are sorted according to increasing phase. This relies on Python
     preserving insertion order when building dicts.
     """
     ck = list(phases.keys())
-    ck.sort(reverse=False) # Sorts in order integer encoded by binary string
+    ck.sort(reverse=False) # Sorts in order of the integer encoded by binary string
     phases = {k : phases[k] for k in ck}
     return phases

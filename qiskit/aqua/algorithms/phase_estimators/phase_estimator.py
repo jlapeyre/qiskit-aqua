@@ -1,3 +1,16 @@
+# This code is part of Qiskit.
+#
+# (C) Copyright IBM 2020.
+#
+# This code is licensed under the Apache License, Version 2.0. You may
+# obtain a copy of this license in the LICENSE.txt file in the root directory
+# of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
+#
+# Any modifications or derivative works of this code must retain this
+# copyright notice, and modified files need to carry a notice indicating
+# that they have been altered from the originals.
+
+
 """The Quantum Phase Estimation Algorithm."""
 
 from typing import Dict, Optional, Union
@@ -14,7 +27,30 @@ from .phase_estimator_result import PhaseEstimatorResult, _sort_phases
 import numpy
 
 class PhaseEstimator(QuantumAlgorithm):
-    """The Quantum Phase Estimation algorithm.
+    """Run the Quantum Phase Estimation algorithm.
+
+    This runs a version of QPE with a multi-qubit register for reading the phase [1]. The main inputs are
+    the number of qubits in the phase-reading register, a state preparation circuit to prepare an input state,
+    and either
+    1) A unitary that will act on the the input state, or
+    2) A quantum-phase-estimation circuit in which the unitary is already embedded.
+    In case 1), an instance of `qiskit.circuit.PhaseEstimation`, a QPE circuit, containing the input unitary
+    will be constructed. After construction, the QPE circuit is run on a backend via the `run` method, and
+    the frequencies or counts of the phases represented by bitstrings are recorded. The results are returned
+    as an instance of qiskit.algorithms.phase_estimator_result.PhaseEstimatorResult.
+
+    If the input state is an eigenstate of the unitary, then in the ideal case, all probability is concentrated
+    on the bitstring corresponding to the eigenvalue of the input state. If the input state is a superposition
+    of eigenstates, then each bitstring is measured with a probability corresponding to its weight in the
+    superposition. In addition, if the phase is not representable exactly by the phase-reading register, the
+    probability will be spread across bitstrings, with an amplitude that decreases with distance from the
+    bitstring most closely approximating the phase.
+
+    **Reference:**
+
+    [1]: Michael A. Nielsen and Isaac L. Chuang. 2011.
+         Quantum Computation and Quantum Information: 10th Anniversary Edition (10th ed.).
+         Cambridge University Press, New York, NY, USA.
     """
 
     def __init__(self,
@@ -88,17 +124,43 @@ class PhaseEstimator(QuantumAlgorithm):
 
     @property
     def pe_circuit(self):
-        """ Return the phase estimation circuit. """
+        """Return the phase estimation circuit. """
         return self._pe_circuit
 
     def _compute_phases(self, circuit_result):
+        """Compute frequencies/counts of phases from the result of running the QPE circuit.
+
+        How the frequencies are computed depends on whether the backend computes amplitude or
+        samples outcomes.
+
+        1) If the backend is a statevector simulator, then the reduced density
+        matrix of the phase-reading register is computed from the combined phase-reading-
+        and input-state registers. The elements of the diagonal `(i, i)` give the
+        probability to measure the each of the states `i`. The index `i` expressed as a binary
+        integer with the LSB rightmost gives the state of the phase-reading register with
+        the LSB leftmost when interpreted as a phase. In order to maintain the compact
+        representation, the phases are maintained as decimal integers.
+        They may be converted to other forms via the results object, `PhaseEstimatorResult`
+        or `HamiltonianPEResult`.
+
+         2) If the backend samples bitstrings, then the counts are first retreived as a dict.
+        The binary strings (the keys) are then reversed so that the LSB is rightmost and the counts
+        are converted to frequencies. Then the keys are sorted according to increasing phase,
+        so that they can be easily understood when displaying or plotting a histogram.
+
+        Args:
+            circuit_result: the result object returned by the backend that rant the QPE circuit.
+
+        Returns:
+               Either a dict or numpy.ndarray representing the frequencies of the phases.
+        """
         if self._quantum_instance.is_statevector:
             state_vec = circuit_result.get_statevector()
             evaluation_density_matrix = get_subsystem_density_matrix(
                 state_vec,
                 range(self._num_evaluation_qubits, self._num_evaluation_qubits + self._num_unitary_qubits)
             )
-            phases = evaluation_density_matrix.diagonal().real # The diagonal is real
+            phases = evaluation_density_matrix.diagonal().real # The diagonal is real, so imaginary part should be zero.
         else:
             # return counts with keys sorted numerically
             num_shots = circuit_result.results[0].shots
@@ -112,6 +174,10 @@ class PhaseEstimator(QuantumAlgorithm):
 
     def _run(self):
         """Run the circuit and return and return `PhaseEstimatorResult`.
+
+
+        Returns:
+               An instance of qiskit.algorithms.phase_estimator_result.PhaseEstimatorResult.
         """
 
         self._add_classical_register()

@@ -6,7 +6,7 @@ from qiskit.aqua.operators import *
 from qiskit.aqua.operators.evolutions import Trotter
 from qiskit.visualization import plot_histogram
 
-def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 8,
+def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 10,
 #             backend = Aer.get_backend('statevector_simulator'),
                backend = Aer.get_backend('qasm_simulator'),
              ):
@@ -24,8 +24,10 @@ def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 8,
 def paulisum():
     a1 = 0.5
     a2 = 1.0
-    hamiltonian = (a1 * X) + (a2 * Z)
-    state_preparation = H.to_circuit()
+    a3 = 1.0
+    hamiltonian = (a1 * X) + (a2 * Y) + (a3 * Z)
+#    state_preparation = H.to_circuit()
+    state_preparation = None
     result = all_phases(hamiltonian, state_preparation)
     return result
 
@@ -34,7 +36,8 @@ import scipy
 def byhand():
     a1 = 0.5
     a2 = 1.0
-    op = (a1 * X) + (a2 * Z)
+    a3 = 1.0
+    op = (a1 * X) + (a2 * Y) + (a3 * Z)
     m = op.to_matrix()
     em = scipy.linalg.expm(1j * m)
     return np.log(scipy.linalg.eigvals(em)).imag
