@@ -4,8 +4,9 @@ from qiskit.aqua.algorithms.phase_estimators import PhaseEstimator, PhaseEstimat
 from qiskit.aqua.algorithms.phase_estimators.hamiltonian_pe import TempPauliEvolve
 from qiskit.aqua.operators import *
 from qiskit.aqua.operators.evolutions import Trotter
+from qiskit.visualization import plot_histogram
 
-def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 10,
+def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 8,
 #             backend = Aer.get_backend('statevector_simulator'),
                backend = Aer.get_backend('qasm_simulator'),
              ):

@@ -62,6 +62,7 @@ class HamiltonianPE(PhaseEstimator):
     def phase_estimation_scale(self):
         return self._pe_scale
 
+
     def _get_unitary(self):
         pe_scale = phase_estimation_scale.from_pauli_sum(self._hamiltonian)
         self._pe_scale = pe_scale
