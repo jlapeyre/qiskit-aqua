@@ -10,8 +10,11 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+"""Scaling for Hamiltonian and eigenvalues to avoid phase wrapping"""
 
+from typing import Union, Dict, List # Optional,
 import numpy
+from qiskit.aqua.operators import OperatorBase
 
 class PhaseEstimationScale():
     """Set and use a bound on eigenvalues of a Hermitian operator in order
@@ -41,7 +44,7 @@ class PhaseEstimationScale():
         return  numpy.pi / self._bound
 
 
-    def scale_phase(self, phi):
+    def scale_phase(self, phi) -> float:
         """Convert a phase into an eigenvalue.
 
         The input phase `phi` corresponds to the eigenvalue of a unitary obtained by
@@ -62,7 +65,7 @@ class PhaseEstimationScale():
             return (phi - 1) * w
 
 
-    def scale_phases(self, phases):
+    def scale_phases(self, phases: Union[List, Dict]) -> Union[Dict, List]:
         """Convert a list or dict of phases to eigenvalues.
 
         The values in the list, or keys in the dict, are values of `phi` and
@@ -71,6 +74,9 @@ class PhaseEstimationScale():
 
         Args:
             phases: a list or dict of values of `phi`.
+
+        Returns:
+           Eigenvalues computed from phases.
         """
         w = 2 * self._bound
         if isinstance(phases, list):
@@ -81,7 +87,7 @@ class PhaseEstimationScale():
         return phases
 
 
-def from_pauli_sum(pauli_sum):
+def from_pauli_sum(pauli_sum: OperatorBase) -> PhaseEstimationScale:
     """Create a PhaseEstimationScale from a `SummedOp` representing a sum of Pauli Operators.
 
     It is assumed that the `SummedOp` `pauli_sum` is the sum of `PauliOp`s. The bound on

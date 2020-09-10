@@ -21,6 +21,42 @@ def all_phases(hamiltonian, state_preparation=None, num_evaluation_qubits = 10,
     result = phase_est.run()
     return result
 
+# def from_bound(hamiltonian, state_preparation=None, num_evaluation_qubits = 10,
+# #             backend = Aer.get_backend('statevector_simulator'),
+#                backend = Aer.get_backend('qasm_simulator'),
+#              ):
+#     """ Run phase hamiltonian estimation
+#     """
+#     qi = QuantumInstance(backend=backend, shots=100000)
+#     phase_est = HamiltonianPE(num_evaluation_qubits=num_evaluation_qubits,
+#                               hamiltonian=hamiltonian,
+#                               bound = bound,
+#                               quantum_instance=qi,
+#                               state_preparation=state_preparation,
+#                               evolution=TempPauliEvolve())
+#     result = phase_est.run()
+#     return result
+
+
+def one_from_bound():
+    a1 = 0.5
+    a2 = 1.0
+    a3 = 1.0
+    hamiltonian = (a1 * X) + (a2 * Y) + (a3 * Z)
+    state_preparation = None
+    bound = 1.2 * sum([abs(hamiltonian.coeff * pauli.coeff) for pauli in hamiltonian])
+    backend = Aer.get_backend('qasm_simulator')
+    qi = QuantumInstance(backend=backend, shots=100000)
+    phase_est = HamiltonianPE(num_evaluation_qubits=8,
+                              hamiltonian=hamiltonian,
+                              bound = bound,
+                              quantum_instance=qi,
+                              state_preparation=state_preparation,
+                              evolution=TempPauliEvolve())
+    result = phase_est.run()
+    return result
+
+
 def paulisum():
     a1 = 0.5
     a2 = 1.0

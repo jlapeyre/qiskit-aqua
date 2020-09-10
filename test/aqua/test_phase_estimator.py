@@ -14,21 +14,20 @@
 
 import unittest
 from test.aqua import QiskitAquaTestCase
+import numpy as np
 from qiskit.aqua.algorithms.phase_estimators import PhaseEstimator, HamiltonianPE
 from qiskit.aqua.algorithms.phase_estimators.hamiltonian_pe import TempPauliEvolve
-
-import numpy as np
-import scipy
 import qiskit
-
 from qiskit.aqua.operators import (H, X, Y, Z)
 
 
 class TestHamiltonianPE(QiskitAquaTestCase):
+    """Tests for obtaining eigenvalues from phase estimation"""
 
-    def all_phases(self, hamiltonian, state_preparation=None, num_evaluation_qubits = 10,
-               backend = qiskit.Aer.get_backend('qasm_simulator'),
-             ):
+    # pylint: disable=invalid-name
+    def hamiltonian_pe(self, hamiltonian, state_preparation=None, num_evaluation_qubits=10,
+                       backend=qiskit.Aer.get_backend('qasm_simulator')):
+        """Run HamiltonianPE and return result with all  phases."""
         qi = qiskit.aqua.QuantumInstance(backend=backend, shots=100000)
         phase_est = HamiltonianPE(
             num_evaluation_qubits=num_evaluation_qubits,
@@ -37,39 +36,68 @@ class TestHamiltonianPE(QiskitAquaTestCase):
         result = phase_est.run()
         return result
 
-
+    # pylint: disable=invalid-name
     def test_pauli_sum_1(self):
         """Two eigenvalues from Pauli sum with X, Z"""
         a1 = 0.5
         a2 = 1.0
         hamiltonian = (a1 * X) + (a2 * Z)
         state_preparation = H.to_circuit()
-        result = self.all_phases(hamiltonian, state_preparation)
+        result = self.hamiltonian_pe(hamiltonian, state_preparation)
         phase_dict = result.filter_phases(0.162, as_float=True)
         phases = list(phase_dict.keys())
         self.assertAlmostEqual(phases[0], 1.119, delta=0.001)
         self.assertAlmostEqual(phases[1], -1.119, delta=0.001)
 
 
-    def test_pauli_sum_1(self):
+    # pylint: disable=invalid-name
+    def test_pauli_sum_2(self):
         """Two eigenvalues from Pauli sum with X, Y, Z"""
         a1 = 0.5
         a2 = 1.0
         a3 = 1.0
         hamiltonian = (a1 * X) + (a2 * Y) + (a3 * Z)
         state_preparation = None
-        result = self.all_phases(hamiltonian, state_preparation)
+        result = self.hamiltonian_pe(hamiltonian, state_preparation)
         phase_dict = result.filter_phases(0.1, as_float=True)
         phases = list(phase_dict.keys())
         self.assertAlmostEqual(phases[0], 1.5, delta=0.001)
         self.assertAlmostEqual(phases[1], -1.5, delta=0.001)
 
 
+    # pylint: disable=invalid-name
+    def test_from_bound(self):
+        """HamiltonianPE with bound"""
+        a1 = 0.5
+        a2 = 1.0
+        a3 = 1.0
+        hamiltonian = (a1 * X) + (a2 * Y) + (a3 * Z)
+        state_preparation = None
+        bound = 1.2 * sum([abs(hamiltonian.coeff * pauli.coeff) for pauli in hamiltonian])
+        backend = qiskit.Aer.get_backend('qasm_simulator')
+        qi = qiskit.aqua.QuantumInstance(backend=backend, shots=100000)
+        phase_est = HamiltonianPE(num_evaluation_qubits=8,
+                                  hamiltonian=hamiltonian,
+                                  bound=bound,
+                                  quantum_instance=qi,
+                                  state_preparation=state_preparation,
+                                  evolution=TempPauliEvolve())
+        result = phase_est.run()
+        phases = result.filter_phases()
+        self.assertEqual(len(phases), 2)
+        self.assertEqual(list(phases.keys()), [1.5, -1.5])
+        phases = result.filter_phases(scaled=False)
+        self.assertEqual(list(phases.keys()), [0.25, 0.75])
+        self.assertEqual(result.single_phase(), -1.5)
+        self.assertEqual(result.single_phase(scaled=False), 0.75)
+
+
 class TestPhaseEstimator(QiskitAquaTestCase):
     """Evolution tests."""
 
-    def one_phase(self, unitary_circuit, state_preparation=None, n_eval_qubits = 8,
-                  backend = qiskit.Aer.get_backend('qasm_simulator')):
+    # pylint: disable=invalid-name
+    def one_phase(self, unitary_circuit, state_preparation=None, n_eval_qubits=8,
+                  backend=qiskit.Aer.get_backend('qasm_simulator')):
         """Run phase estimation with operator, eigenvalue pair `unitary_circuit`,
         `state_preparation`. Return the bit string with the largest amplitude.
         """
@@ -127,8 +155,8 @@ class TestPhaseEstimator(QiskitAquaTestCase):
         self.assertEqual(phase, 0.5)
 
 
-    def all_phases(self, unitary_circuit, state_preparation=None, num_evaluation_qubits = 8,
-                   backend = qiskit.Aer.get_backend('qasm_simulator')):
+    def phase_estimation(self, unitary_circuit, state_preparation=None, num_evaluation_qubits=8,
+                         backend=qiskit.Aer.get_backend('qasm_simulator')):
         """Run phase estimation with operator, eigenvalue pair `unitary_circuit`,
         `state_preparation`. Return all results
         """
@@ -145,8 +173,9 @@ class TestPhaseEstimator(QiskitAquaTestCase):
         """superposition eigenproblem Z, |+>"""
         unitary_circuit = Z.to_circuit()
         state_preparation = H.to_circuit() # prepare |+>
-        result = self.all_phases(
-            unitary_circuit, state_preparation, backend=qiskit.Aer.get_backend('statevector_simulator'))
+        result = self.phase_estimation(
+            unitary_circuit, state_preparation,
+            backend=qiskit.Aer.get_backend('statevector_simulator'))
         phases = result.filter_phases(1e-15, as_float=True)
         self.assertEqual(list(phases.keys()), [0.0, 0.5])
         np.testing.assert_allclose(list(phases.values()), [0.5, 0.5])
@@ -156,12 +185,11 @@ class TestPhaseEstimator(QiskitAquaTestCase):
         """superposition eigenproblem Z, |+>, bitstrings"""
         unitary_circuit = Z.to_circuit()
         state_preparation = H.to_circuit() # prepare |+>
-        result = self.all_phases(
-            unitary_circuit, state_preparation, backend=qiskit.Aer.get_backend('statevector_simulator'))
+        result = self.phase_estimation(
+            unitary_circuit, state_preparation,
+            backend=qiskit.Aer.get_backend('statevector_simulator'))
         phases = result.filter_phases(1e-15, as_float=False)
         self.assertEqual(list(phases.keys()), ['00000000', '10000000'])
-
-
 
 
 if __name__ == '__main__':

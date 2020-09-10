@@ -10,8 +10,11 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+"""Result of running PhaseEstimator"""
 
+from typing import Optional, Dict
 import numpy
+from qiskit.result import Result
 
 # import qiskit
 # Maybe we want to use this abstract class
@@ -27,7 +30,10 @@ class PhaseEstimatorResult():
     is `filter_phases`.
     """
 
-    def __init__(self, num_evaluation_qubits, circuit_result, phase_array=None, phase_dict=None):
+    def __init__(self, num_evaluation_qubits: int,
+                 circuit_result: Result,
+                 phase_array: Optional[numpy.ndarray] = None,
+                 phase_dict: Optional[Dict] = None) -> None:
         """
         Args:
             num_evaluation_qubits: number of qubits in phase-readout register.
@@ -81,8 +87,6 @@ class PhaseEstimatorResult():
         return self._circuit_result
 
 
-    # If we reversed the bit order of evaluation register circuit (including the iqft) then we would avoid
-    # the binary calculations in the case of the statevector simulator.
     def single_phase(self):
         """Return the estimated phase as a number between 0.0 and 1.0, with 1.0.
 
@@ -93,14 +97,16 @@ class PhaseEstimatorResult():
         if not self._phase_dict is None:
             binary_phase_string = max(self._phase_dict, key=self._phase_dict.get)
         else:
-            idx = numpy.argmax(abs(self._phase_array)) # numpy.argmax ignores complex part of number. But, we take abs anyway
+            # numpy.argmax ignores complex part of number. But, we take abs anyway
+            idx = numpy.argmax(abs(self._phase_array))
             binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
         phase = _bit_string_to_phase(binary_phase_string)
         return phase
 
 
-    def filter_phases(self, cutoff, as_float=True):
-        """Return a filtered dict of phases (keys) and frequencies (values)
+    def filter_phases(self, cutoff: float = 0.0,
+                      as_float: bool = True) -> Dict:
+        """Return a filtered dict of phases (keys) and frequencies (values).
 
         Only phases with frequencies (counts) larger than `cutoff` are included.
         It is assumed that the `run` method has been called so that the phases have been computed.
@@ -111,14 +117,19 @@ class PhaseEstimatorResult():
         out these uninteresting bit strings.
 
         Args:
-            cutoff: Minimum weight of number of counts required to keep a bit string.
-            as_float: If `True`, returned keys are floats in `[0.0, 1)`. If `False`
+            cutoff (float): Minimum weight of number of counts required to keep a bit string.
+                    The default value is `0.0`.
+            as_float (bool): If `True`, returned keys are floats in `[0.0, 1)`. If `False`
                       returned keys are bit strings.
+
+        Returns:
+            A filtered dict of phases (keys) and frequencies (values).
         """
         if not self._phase_dict is None:
             counts = self._phase_dict
             if as_float:
-                phases = {_bit_string_to_phase(k) : counts[k] for k in counts.keys() if counts[k] > cutoff}
+                phases = {_bit_string_to_phase(k) : counts[k]
+                          for k in counts.keys() if counts[k] > cutoff}
             else:
                 phases = {k : counts[k] for k in counts.keys() if counts[k] > cutoff}
 
@@ -127,8 +138,8 @@ class PhaseEstimatorResult():
             for idx, amplitude in enumerate(self._phase_array):
                 if amplitude > cutoff:
                     # Each index corresponds to a computational basis state with the LSB rightmost.
-                    # But, we chose to apply the unitaries such that the phase is recorded in reverse
-                    # order. So, we reverse the bitstrings here.
+                    # But, we chose to apply the unitaries such that the phase is recorded
+                    # in reverse order. So, we reverse the bitstrings here.
                     binary_phase_string = numpy.binary_repr(idx, self._num_evaluation_qubits)[::-1]
                     if as_float:
                         _key = _bit_string_to_phase(binary_phase_string)
@@ -150,7 +161,7 @@ class PhaseEstimatorResult():
 
 # TODO: maybe we do want to remove leading _
 # This is useful for pedagogy.
-def _bit_string_to_phase(binary_string):
+def _bit_string_to_phase(binary_string: str) -> float:
     """Convert bit string to phase in `[0,1)`
 
     It is assumed that the bit string is correctly padded and that the order of
@@ -160,18 +171,21 @@ def _bit_string_to_phase(binary_string):
 
     Args:
         binary_string: A string of characters '0' and '1'.
+
+    Returns:
+        a phase scaled to `[0,1)`.
     """
     n_qubits = len(binary_string)
     return int(binary_string, 2) / (2 ** n_qubits)
 
 
-def _sort_phases(phases):
-    """Sort a dict whose keys are bit strings representing phases and whose values are frequencies by bit string.
+def _sort_phases(phases: Dict) -> Dict:
+    """Sort a dict of bit strings representing phases (keys) and frequencies (values) by bit string.
 
     The bit strings are sorted according to increasing phase. This relies on Python
     preserving insertion order when building dicts.
     """
-    ck = list(phases.keys())
-    ck.sort(reverse=False) # Sorts in order of the integer encoded by binary string
-    phases = {k : phases[k] for k in ck}
+    pkeys = list(phases.keys())
+    pkeys.sort(reverse=False) # Sorts in order of the integer encoded by binary string
+    phases = {k : phases[k] for k in pkeys}
     return phases
